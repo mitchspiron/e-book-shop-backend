@@ -16,7 +16,6 @@ import {
   UpdateProfileDto,
 } from './dto';
 import Stripe from '../../utils/Stripe';
-import { includes, map } from 'lodash';
 import { StripeCardDetails } from '../../utils/interface';
 
 @Injectable()
@@ -102,7 +101,7 @@ export class UserService {
             userId: user.id,
           },
         });
-        console.log('🚀 ~ UserService ~ stripeCustomer:', stripeCustomer);
+        //console.log('🚀 ~ UserService ~ stripeCustomer:', stripeCustomer);
 
         await this.prisma.user.update({
           where: { id: user.id },
@@ -139,42 +138,30 @@ export class UserService {
         );
       }
 
-      const cardToken = await Stripe.tokens.create({
+      /* const paymentMethod = await Stripe.paymentMethods.create({
+        type: 'card',
         card: {
-          name: dto.cardName,
           number: dto.cardNumber,
-          exp_month: dto.cardExpiryMonth.toString(),
-          exp_year: dto.cardExpiryYear.toString(),
+          exp_month: dto.cardExpiryMonth,
+          exp_year: dto.cardExpiryYear,
           cvc: dto.cardCvc.toString(),
         },
+      }); */
+
+      const allCards = await Stripe.paymentMethods.list({
+        type: 'card',
+        customer: userData.stripeCustomerId,
       });
 
-      const allUserCards = await Stripe.customers.listSources(
-        userData.stripeCustomerId,
-        {
-          object: 'card',
-        },
-      );
-
-      let allCards: any = [];
-      allCards = allUserCards.data;
-      const allFingerPrints = map(allCards, (data) => {
-        return data.fingerprint;
-      });
-
-      const existingCard = includes(
-        allFingerPrints,
-        cardToken.card.fingerprint,
-      );
-
-      if (existingCard) {
-        throw new BadRequestException('Card already exists');
+      if (allCards.data.length >= 1) {
+        throw new BadRequestException('User already has card!');
       }
 
       const card = await Stripe.customers.createSource(
         userData.stripeCustomerId,
         {
-          source: cardToken.id,
+          //source: paymentMethod.id,
+          source: 'tok_visa',
         },
       );
 
@@ -203,7 +190,7 @@ export class UserService {
     try {
       const userData = await this.prisma.user.findUnique({
         where: { id: user.id },
-        select: { stripeCustomerId: true },
+        select: { name: true, stripeCustomerId: true },
       });
 
       if (!userData.stripeCustomerId) {
@@ -234,7 +221,7 @@ export class UserService {
           );
           const stripeCardObj = {
             // @ts-ignore : Stripe Ignore
-            cardName: cardData.name,
+            cardName: cardData.name || userData.name,
             cardId: cards[i].cardId,
             // @ts-ignore : Stripe Ignore
             cardExpiryMonth: cardData.exp_month,
