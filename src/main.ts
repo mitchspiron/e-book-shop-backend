@@ -13,6 +13,14 @@ async function bootstrap() {
 
   app.useGlobalFilters(new ClassValidatorExceptionsFilter());
 
+  app.enableCors({
+    allowedHeaders:
+      'Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization',
+    origin: process.env.URL_FRONT || '*',
+    credentials: true,
+  });
+
   await app.listen(process.env.PORT || 3000);
+  console.log('🚀 Server started at ' + process.env.URL_BACK);
 }
 bootstrap();
