@@ -107,10 +107,10 @@ export class AuthService {
     });
   }
 
-  decodeToken(req: Request) {
+  async decodeToken(req: Request) {
     const AuthHeader = req.headers.authorization;
     const Token = AuthHeader.split(' ')[1];
-    const secret = 'at-secret';
+    const secret = process.env.JWT_SECRET;
     const Data = this.jwtService.verify(Token, { secret });
 
     const { iat, exp, ...filteredData } = Data;
@@ -118,18 +118,18 @@ export class AuthService {
     return filteredData;
   }
 
-  /* async isLoggedIn(req: Request, res: Response): Promise<any> {
+  async isLoggedIn(req: Request, res: Response): Promise<any> {
     if (!req.headers.authorization) {
       throw new UnauthorizedException('Invalid Session');
     }
 
+    let data: any;
     try {
-      const Decoded = this.decodeToken(req);
-      req.user = Decoded;
-      console.log(req.user);
+      const Decoded = await this.decodeToken(req);
+      data = Decoded;
     } catch (err) {
       throw new UnauthorizedException('Invalid Session');
     }
-    res.send(req.user);
-  } */
+    res.send(data);
+  }
 }
